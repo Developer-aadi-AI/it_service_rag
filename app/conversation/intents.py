@@ -25,7 +25,17 @@ _AFFIRMATIVE_ONLY = re.compile(
     r"one more (?:thing|question)|actually,? yes)\s*[.!]*\s*$", re.I)
 
 
+_INFO_QUESTION = re.compile(r"^\s*(?:how|what|when|where|why|which|who|is|are|does|do)\b", re.I)
+
+
 def is_contact_request(text: str) -> bool:
+    """Explicit request to be contacted ("call me back", "I want a quote").
+
+    Informational questions that merely mention a quote/consultation
+    ("How fast can I get a quote?") are answered from the knowledge base instead.
+    """
+    if _INFO_QUESTION.match(text) and not re.search(r"\b(?:talk|speak|connect)\s+(?:to|with)\b", text, re.I):
+        return False
     return bool(_CONTACT_REQUEST.search(text))
 
 

@@ -6,7 +6,7 @@ Decision flow
 2. Retrieve (hybrid dense + BM25).
 3. top_score >= similarity_threshold          -> generator answers from context
                                                  (or says needs_team / off_topic).
-4. domain_threshold <= top_score < threshold  -> no specific answer, but in V Group's
+4. domain_threshold <= top_score < threshold  -> no specific answer, but in D Group's
                                                  domain -> triage -> team hand-off + contact form.
 5. below domain_threshold                     -> off-topic (an LLM triage may still
                                                  rescue clearly business-related questions).
@@ -17,6 +17,7 @@ team hand-off ("That sounds like a great idea!" for project ideas).
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -28,6 +29,7 @@ from app.ingestion.pipeline import IndexReport, ensure_index
 from app.llm.base import LLMClient, LLMError, create_llm
 from app.logging_config import redact
 from app.rag import intent
+from app.rag.intent import is_company_fact as rag_company_fact
 from app.rag.contact_info import ContactInfo, compose_contact_answer, is_contact_question, parse_contact_page
 from app.rag.generator import ExtractiveGenerator, GenerationResult, LLMGenerator, Triage
 from app.rag.prompts import (CONTACT_FORM, ERROR_REPLY, INFORMATION_TEAM_REPLY, OFF_TOPIC_REPLY,
@@ -75,6 +77,7 @@ def _is_company_page(meta: dict) -> bool:
 class RAGPipeline:
     def __init__(self, settings: Settings, retriever: Retriever, llm: LLMClient | None,
                  embedder: Embedder, capabilities: str = "") -> None:
+        self.events = None  # optional analytics EventRecorder (set by build_services)
         self.settings = settings
         self.retriever = retriever
         self.llm = llm
@@ -126,6 +129,8 @@ class RAGPipeline:
             if self.generator is self.extractive:
                 raise
             logger.error("LLM generation failed (%s); falling back to extractive answer", exc)
+            if self.events is not None:
+                self.events.error("llm", exc)
             query = intent.OVERVIEW_QUERY if overview else question
             return self.extractive.generate(query, sources, overview=overview)
 
@@ -155,6 +160,8 @@ class RAGPipeline:
             self._answer(resp, question, history, top_k, similarity_threshold, search_query)
         except Exception:  # never leak internals to the user
             logger.exception("pipeline failure request_id=%s", resp.request_id)
+            if self.events is not None:
+                self.events.error("rag", "PipelineError")
             resp.status, resp.answer, resp.sources = "error", ERROR_REPLY, []
             resp.action = dict(CONTACT_FORM, reason="error")
         resp.latency_ms = int((time.perf_counter() - start) * 1000)
@@ -168,6 +175,12 @@ class RAGPipeline:
         kind = intent.smalltalk_kind(question)
         if kind:
             resp.status, resp.answer, resp.generator = "smalltalk", SMALLTALK_REPLIES[kind], "rules"
+            return
+
+        # Unclear input with no words ("???", "...", "12345"): nothing to search for.
+        if not re.search(r"[^\W\d_]{2,}", question):
+            resp.generator = "rules"
+            self._off_topic(resp)
             return
 
         # Contact details: the Contact Us page is a label block, so in offline mode its
@@ -191,13 +204,16 @@ class RAGPipeline:
         overview = intent.is_company_overview(question)
         search_query = intent.OVERVIEW_QUERY if overview else (rewritten or question)
         resp.search_query = search_query
+        company_scope = overview or rag_company_fact(question)
         result = self.retriever.retrieve(
             search_query, top_k=top_k, similarity_threshold=threshold,
-            metadata_filter=_is_company_page if overview else None)
-        if overview and not result.has_context:  # fall back to unrestricted search
+            metadata_filter=_is_company_page if company_scope else None)
+        if company_scope and not result.has_context:  # fall back to unrestricted search
             result = self.retriever.retrieve(search_query, top_k=top_k, similarity_threshold=threshold)
         resp.top_score = round(result.top_score, 4)
 
+        logger.debug("retrieval q=%r top=%.3f hits=%s", redact(search_query), result.top_score,
+                     [(h.metadata.get("page_id"), round(h.score, 3)) for h in result.hits])
         if result.has_context:
             sources = group_sources(result.hits)
             # Offline answers are selected against the (possibly rewritten) search query;
@@ -210,6 +226,13 @@ class RAGPipeline:
                 resp.sources = self._sources(sources, gen.citations)
                 return
             if gen.status == "off_topic":
+                if self.llm is not None and intent.is_project_request(question):
+                    # strong retrieval match + "can you build X": ask the feasibility triage instead
+                    category = self.triage.classify(question)
+                    if category != "off_topic":
+                        resp.generator = "triage-llm"
+                        self._team_handoff(resp, category)
+                        return
                 self._off_topic(resp)
                 return
             kind = gen.request_kind if gen.request_kind != "other" else (

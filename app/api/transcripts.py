@@ -6,6 +6,7 @@ from fastapi.responses import PlainTextResponse
 
 from app.api.deps import get_services
 from app.api.schemas import EmailRequest, EmailResponse
+from app.conversation.manager import EmailLimitReached
 from app.services import Services
 from app.transcripts.builder import build_transcript, transcript_filename
 
@@ -35,6 +36,8 @@ def request_email(session_id: str, body: EmailRequest, svc: Services = Depends(g
         future = svc.manager.send_email(session_id, body.type, str(body.email) if body.email else None)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except EmailLimitReached as exc:
+        raise HTTPException(status_code=429, detail="This chat has reached its email limit.") from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail="Email is not available right now.") from exc
     return EmailResponse(queued=future is not None, message=_EMAIL_CONFIRMATION[body.type])

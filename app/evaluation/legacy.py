@@ -1,6 +1,5 @@
-"""Offline evaluation of retrieval and end-to-end RAG behaviour.
+"""Phase 1 evaluation helpers (kept for the existing tests; the full harness is app/evaluation/harness.py).
 
-python -m app.evaluation        # prints metrics as JSON
 
 Metrics go beyond "HTTP 200": retrieval hit@k / MRR against pages known to
 contain the answer, citation correctness, fact presence, no-answer routing and
@@ -71,21 +70,3 @@ def evaluate_pipeline(pipeline: RAGPipeline, data: dict[str, Any]) -> dict[str, 
         "off_topic_accuracy": round(off_ok / len(off), 3),
         "misses": details,
     }
-
-
-def main() -> None:
-    from app.config import get_settings
-    from app.logging_config import setup_logging
-    from app.rag.pipeline import build_pipeline
-
-    settings = get_settings()
-    setup_logging("WARNING")
-    bundle = build_pipeline(settings)
-    data = load_eval_set()
-    report = {"retrieval": evaluate_retrieval(bundle.pipeline.retriever, data["answerable"]),
-              "pipeline": evaluate_pipeline(bundle.pipeline, data)}
-    print(json.dumps(report, indent=2, ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()

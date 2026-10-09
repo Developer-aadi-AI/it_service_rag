@@ -88,7 +88,7 @@ def ensure_index(settings: Settings, embedder: Embedder, store: VectorStore,
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build the V Group vector index")
+    parser = argparse.ArgumentParser(description="Build the D Group vector index")
     parser.add_argument("--force", action="store_true", help="rebuild even if unchanged")
     args = parser.parse_args()
     settings = get_settings()

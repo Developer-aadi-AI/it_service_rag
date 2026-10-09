@@ -13,7 +13,7 @@ class FAQ:
 
 @dataclass
 class Document:
-    """One cleaned page from the supplied V Group dataset.
+    """One cleaned page from the supplied D Group dataset.
 
     Raw fields (page_id, url, title, text, source_type, platform) come from the
     dataset. The remaining fields are derived from that same content; nothing is

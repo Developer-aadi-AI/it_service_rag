@@ -1,0 +1,6 @@
+# Development, tests, notebook prototype
+-r requirements.txt
+pytest>=8.0
+httpx>=0.27
+gradio>=5.0
+ipykernel>=6.0

@@ -76,6 +76,15 @@ class Lead:
         return self.name.split()[0]
 
 
+class LeadCaptureError(RuntimeError):
+    """The lead could not be stored (the customer is asked to retry)."""
+
+
+def lead_confirmation(lead: "Lead") -> str:
+    return (f"Thank you, {lead.first_name}! We've received your details, and the relevant D Group team will "
+            "connect with you shortly. Is there anything else I can help you with?")
+
+
 class LeadService:
     def __init__(self, db: Database, clock: Callable[[], datetime],
                  on_created: Callable[[Lead], None] | None = None) -> None:

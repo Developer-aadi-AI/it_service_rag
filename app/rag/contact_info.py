@@ -19,9 +19,9 @@ _OFFICE = re.compile(
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[a-z]{2,}", re.I)
 
 _CONTACT_Q = re.compile(
-    r"\b(office|offices|address|located|location|where are you|where is (?:v ?group|vgroup|your)|"
-    r"headquarter\w*|hq|phone|telephone|call you|call v ?group|number|email|e-mail|mail id|"
-    r"contact (?:details|info\w*|you|v ?group|number)|how (?:can|do) i (?:contact|reach)|reach you|"
+    r"\b(office|offices|address|located|location|where are you|where is (?:d ?group|dgroup|your)|"
+    r"headquarter\w*|hq|phone|telephone|call you|call d ?group|number|email|e-mail|mail id|"
+    r"contact (?:details|info\w*|you|d ?group|number)|how (?:can|do) i (?:contact|reach)|reach you|"
     r"get in touch)\b", re.I)
 _NOT_CONTACT = re.compile(r"\b(hours|timing|timings|open|opening|weekend|form|policy|privacy|"
                           r"employees?|staff|team size|careers?|jobs?|marketing|newsletter|template|"

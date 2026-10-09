@@ -1,14 +1,14 @@
 # CLAUDE.md
 
-## Project: V Group AI Customer Support & Sales Assistant
+## Project: D Group AI Customer Support & Sales Assistant
 
 ### Goal
-Build an AI-powered customer support and sales chatbot for V Group using the provided V Group website/WordPress data as the knowledge source. The system should provide grounded RAG answers and support multi-turn conversations, service recommendations, lead capture, contact/support requests, sentiment-aware responses, session management, transcripts, email follow-ups, feedback, logging, and analytics.
+Build an AI-powered customer support and sales chatbot for D Group using the provided D Group website/WordPress data as the knowledge source. The system should provide grounded RAG answers and support multi-turn conversations, service recommendations, lead capture, contact/support requests, sentiment-aware responses, session management, transcripts, email follow-ups, feedback, logging, and analytics.
 
 ### Source of Truth
 The user will provide the project data to the agents.
 - Inspect the supplied data before implementing retrieval or answer logic.
-- Do not invent V Group services, policies, pricing, FAQs, or business facts.
+- Do not invent D Group services, policies, pricing, FAQs, or business facts.
 - Preserve useful source metadata.
 - If the supplied data does not contain an answer, handle it as a no-answer case rather than hallucinating.
 - Use the supplied data as the source of truth for business knowledge.
@@ -64,7 +64,7 @@ Keep session state controlled and configurable.
 Adapt responses to user sentiment. For frustrated/negative users, acknowledge the frustration naturally, reassure where appropriate, provide useful help, and ask clarifying questions when needed. Avoid robotic or excessive empathy.
 
 ### Irrelevant Inputs
-Detect repeated irrelevant/unclear inputs. Inform the user that the question is outside supported V Group information, track attempts, show remaining attempts, and end the session after 3 irrelevant user inputs. Make the limit configurable.
+Detect repeated irrelevant/unclear inputs. Inform the user that the question is outside supported D Group information, track attempts, show remaining attempts, and end the session after 3 irrelevant user inputs. Make the limit configurable.
 
 ### Idle Sessions
 Implement an inactivity flow:
@@ -145,7 +145,7 @@ Test:
 - email workflow
 - API edge cases
 
-Build an evaluation set from the supplied V Group data. Do not measure quality only by HTTP 200 responses.
+Build an evaluation set from the supplied D Group data. Do not measure quality only by HTTP 200 responses.
 
 ### Code Quality
 Prioritize correctness, grounded answers, maintainability, clear architecture, testability, security, and performance. Inspect the repository before changing it. Prefer simple modular solutions. Use type hints where useful, centralized configuration, and explicit error handling.

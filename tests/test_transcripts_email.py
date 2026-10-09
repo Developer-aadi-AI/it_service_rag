@@ -34,12 +34,12 @@ def test_transcript_contents(svc, clock):
     s = chat(svc, clock, "What is SMTU?", "How many hours does Annual Support include?", name="Priya Sharma")
     svc.manager.close(s, "user_ended")
     text = build_transcript(s)
-    assert text.startswith("V Group - Chat Transcript")
+    assert text.startswith("D Group - Chat Transcript")
     assert "Date:       Thursday, 8 October 2026" in text
     assert "Started:    2026-10-08 09:30:00 UTC" in text and "Ended:" in text
     assert "Customer:   Priya Sharma" in text and "Status:     Conversation completed" in text
     assert "[09:30:07 UTC] You:" in text and "    What is SMTU?" in text
-    assert "] V Group Assistant:" in text and "120" in text
+    assert "] D Group Assistant:" in text and "120" in text
     assert "Sources:" in text and "https://webstore.vgroup.net/" in text
     assert "All times are in Coordinated Universal Time (UTC)." in text
     assert not INTERNAL.search(text), INTERNAL.search(text)
@@ -48,7 +48,7 @@ def test_transcript_contents(svc, clock):
 def test_transcript_filename(svc, clock):
     s = chat(svc, clock, "What is SMTU?")
     name = transcript_filename(s)
-    assert re.fullmatch(r"vgroup-chat-transcript-20261008-0930-[0-9a-f]{8}\.txt", name)
+    assert re.fullmatch(r"dgroup-chat-transcript-20261008-0930-[0-9a-f]{8}\.txt", name)
 
 
 def test_friendly_date():
@@ -80,7 +80,7 @@ def test_each_email_type(svc, clock, kind):
     svc.manager.send_email(s.session_id, kind, "alex@example.com").result()
     sent = svc.mailbox.sent[-1]
     assert sent.email_type == kind and sent.to == "alex@example.com"
-    assert sent.text.startswith("Hi Alex,") and "The V Group team" in sent.text
+    assert sent.text.startswith("Hi Alex,") and "The D Group team" in sent.text
     assert "webstore@vgroupinc.com" in sent.text  # footer from the supplied Contact Us page
     assert sent.html and "<html>" in sent.html
     for part in (sent.subject, sent.text, sent.html):
@@ -147,7 +147,7 @@ def test_lead_followup_summary_mentions_next_step(svc, clock):
 # --- senders ----------------------------------------------------------------------------------
 
 def test_file_sender_writes_valid_eml(tmp_path):
-    sender = FileEmailSender(tmp_path, "V Group <no-reply@example.com>")
+    sender = FileEmailSender(tmp_path, "D Group <no-reply@example.com>")
     sender.send(OutgoingEmail(to="a@example.com", subject="Hello", text="Plain", html="<p>Html</p>",
                               attachments=[Attachment("t.txt", b"transcript", "text/plain")], email_type="summary",
                               session_id="abcdef123"))
@@ -181,7 +181,7 @@ def test_smtp_sender_uses_starttls_and_login(monkeypatch):
             events.append(("send", msg["To"]))
 
     monkeypatch.setattr("app.email.senders.smtplib.SMTP", FakeSMTP)
-    SMTPEmailSender("smtp.example.com", 587, "V Group <a@example.com>", "user", "secret").send(
+    SMTPEmailSender("smtp.example.com", 587, "D Group <a@example.com>", "user", "secret").send(
         OutgoingEmail(to="b@example.com", subject="s", text="t"))
     assert events == [("connect", "smtp.example.com", 587), ("starttls",), ("login", "user"), ("send", "b@example.com")]
 

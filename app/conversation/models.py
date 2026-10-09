@@ -1,6 +1,7 @@
 """Session and message models for multi-turn conversations."""
 from __future__ import annotations
 
+import re
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -92,7 +93,9 @@ class Session:
             return []
         convo = [m for m in self.messages if m.kind in ("message", "lead_confirmation", "contact_prompt")]
         recent = convo[-2 * turns:]
-        out = [{"role": m.role, "content": m.content[:max_chars]} for m in recent]
+        # [n] markers refer to the sources of *that* turn; drop them so the LLM
+        # cannot confuse them with the numbering of the current context.
+        out = [{"role": m.role, "content": re.sub(r"\s*\[\d{1,2}\]", "", m.content)[:max_chars]} for m in recent]
         while out and out[0]["role"] != "user":  # LLM APIs expect a user turn first
             out.pop(0)
         return out

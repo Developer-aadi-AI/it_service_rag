@@ -1,7 +1,7 @@
 """Turn extracted page sentences into natural, readable chat answers.
 
 The supplied page text is flattened website copy: headings, menu labels and
-button text are glued onto real sentences ("Build Your Platform V Group
+button text are glued onto real sentences ("Build Your Platform D Group
 specializes in..."). These helpers strip that residue and compose the
 remaining (verbatim, grounded) sentences into a short conversational reply.
 No new facts are introduced; only wording around the facts is added.
@@ -20,7 +20,7 @@ _CTA_NOISE = re.compile(
 )
 # Words that typically start a real sentence in this copy (followed by a lowercase word).
 _SENTENCE_START = re.compile(
-    r"\b(?:At V Group|V Group|Contact us|We|Our|With|Whether|From|This|These|Its|It|You|Your|Yes|Absolutely|"
+    r"\b(?:At D Group|D Group|Contact us|We|Our|With|Whether|From|This|These|Its|It|You|Your|Yes|Absolutely|"
     r"Definitely|Every|Each|Simply|Built|Using|If|When|Unlike|For|By|In|As|To|The|A|An)[\s,]+[a-z0-9$]"
 )
 _LEADING_JUNK = re.compile(r"^[\s\-–—:|,.;]+")
@@ -42,7 +42,7 @@ def _headline_like(words: list[str]) -> bool:
 
 
 def strip_heading_prefix(sentence: str) -> str:
-    """'UI/UX Design Wireframes Start Your Project V Group helps...' -> 'V Group helps...'"""
+    """'UI/UX Design Wireframes Start Your Project D Group helps...' -> 'D Group helps...'"""
     best = 0
     for m in _SENTENCE_START.finditer(sentence):
         if m.start() == 0:
@@ -60,6 +60,8 @@ def _cut_glued_list(s: str) -> str:
     if idx == -1:
         return s
     tail = s[idx + 2:].split()
+    if tail and tail[0].startswith(("http://", "https://")):
+        return s[:idx] + ": " + tail[0].rstrip(".,")  # "...purchase it directly at: <url>" keeps the link
     caps = sum(1 for w in tail if w[:1].isupper() or not w[:1].isalpha())
     intro = bool(_LIST_INTRO_END.search(s[:idx]))  # "...for these reasons: <list>"
     if len(tail) >= 6 and (caps / len(tail) > 0.5 or intro):
@@ -92,7 +94,7 @@ def is_fragment(sentence: str) -> bool:
     if re.search(r"\b(?:these reasons|the following)\.$", sentence, re.I):
         return True
     words = sentence.split()
-    if len(words) < 8:  # short lines are usually taglines/headings ("V Group is here with solutions...")
+    if len(words) < 8:  # short lines are usually taglines/headings ("D Group is here with solutions...")
         return True
     # Prose has several lowercase function words; label lists ("Inventory Setup Up to 100 SKUs") don't.
     function_words = re.findall(r"\b(?:the|a|an|and|or|to|of|for|with|in|on|our|we|your|you|is|are|that|"

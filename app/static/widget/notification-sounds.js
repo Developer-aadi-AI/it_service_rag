@@ -1,5 +1,5 @@
 /*
- * V Group chat notification sounds (frontend only; no audio files needed).
+ * D Group chat notification sounds (frontend only; no audio files needed).
  *
  * Usage:
  *   vgPlay("sent")              - user sent a message (play locally, on send)

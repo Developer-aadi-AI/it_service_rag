@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.git
+**/__pycache__
+.pytest_cache
+storage/
+reports/
+notebooks/
+tests/
+*.ipynb

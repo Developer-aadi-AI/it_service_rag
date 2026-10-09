@@ -41,7 +41,7 @@ def to_mime(email: OutgoingEmail, sender: str) -> MimeMessage:
     msg["To"] = email.to
     msg["Subject"] = email.subject
     msg["Date"] = formatdate(localtime=False, usegmt=True)
-    msg["Message-ID"] = make_msgid(domain="vgroup-assistant.local")
+    msg["Message-ID"] = make_msgid(domain="dgroup-assistant.local")
     if email.reply_to:
         msg["Reply-To"] = email.reply_to
     msg.set_content(email.text)

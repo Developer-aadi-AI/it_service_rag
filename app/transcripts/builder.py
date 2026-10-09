@@ -42,7 +42,7 @@ def _strip_markers(text: str) -> str:
 
 def build_transcript(session: Session) -> str:
     lines = [
-        "V Group - Chat Transcript",
+        "D Group - Chat Transcript",
         "=" * 60,
         f"Date:       {friendly_date(session.created_at)}",
         f"Started:    {utc_datetime(session.created_at)}",
@@ -61,7 +61,7 @@ def build_transcript(session: Session) -> str:
         if m.created_at.date() != current_day:  # long chats across midnight
             current_day = m.created_at.date()
             lines += ["", f"--- {friendly_date(m.created_at)} ---", ""]
-        speaker = "You" if m.role == "user" else "V Group Assistant"
+        speaker = "You" if m.role == "user" else "D Group Assistant"
         lines.append(f"[{utc_time(m.created_at)}] {speaker}:")
         for para in m.content.split("\n"):
             lines.append(f"    {para}" if para.strip() else "")
@@ -76,7 +76,7 @@ def build_transcript(session: Session) -> str:
 
 def transcript_filename(session: Session) -> str:
     stamp = session.created_at.strftime("%Y%m%d-%H%M")
-    return f"vgroup-chat-transcript-{stamp}-{session.session_id[:8]}.txt"
+    return f"dgroup-chat-transcript-{stamp}-{session.session_id[:8]}.txt"
 
 
 def save_transcript(session: Session, directory: Path) -> Path:
@@ -89,9 +89,10 @@ def save_transcript(session: Session, directory: Path) -> Path:
 # --- summaries ------------------------------------------------------------------
 
 _SUMMARY_SYSTEM = (
-    "Summarise this customer chat with V Group's website assistant for an email to the customer. "
+    "Summarise this customer chat with D Group's website assistant for an email to the customer. "
     "Write 2-4 short bullet points covering what the customer asked about and what information was "
-    "provided. Use only facts stated in the chat; do not add offers, prices or promises that are not in it. "
+    "provided, addressed to the customer in the second person (\"You asked about...\", \"Our team will...\"). "
+    "Use only facts stated in the chat; do not add offers, prices or promises that are not in it. "
     "Do not mention the assistant's internal workings. Reply with JSON only: {\"points\": [string]}"
 )
 _SUMMARY_SCHEMA = {"type": "object", "properties": {"points": {"type": "array", "items": {"type": "string"}}},
@@ -127,5 +128,5 @@ def summarize(session: Session, llm: LLMClient | None = None) -> list[str]:
     if session.lead_ids:
         points.append("You shared your contact details, and our team will connect with you shortly.")
     if not points:
-        points.append("Thank you for visiting V Group's website chat.")
+        points.append("Thank you for visiting D Group's website chat.")
     return points

@@ -87,7 +87,7 @@ class FollowUpRewriter:
             subject = (m.group(1) or m.group(2) or "").strip()
             if not subject:
                 return None
-            # the new subject must itself be V Group territory ("what about the weather?" is not)
+            # the new subject must itself be D Group territory ("what about the weather?" is not)
             if self.retriever.retrieve(subject).top_score < self.domain_threshold:
                 return None
             prev = session.last_relevant_query or session.topic or ""

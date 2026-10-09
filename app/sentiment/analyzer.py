@@ -147,4 +147,4 @@ def focus_query(text: str, analyzer: "SentimentAnalyzer", is_business: "Callable
 ESCALATION_OFFER = ("If you'd prefer to speak with someone directly, share your details in the form below "
                     "and our support team will connect with you shortly.")
 CLARIFY_FRUSTRATED = ("Could you tell me a bit more about what you need help with - for example, which "
-                      "V Group service, product or project this is about?")
+                      "D Group service, product or project this is about?")

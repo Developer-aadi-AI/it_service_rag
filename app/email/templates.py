@@ -17,7 +17,7 @@ class Footer:
 
     def text(self) -> str:
         parts = [p for p in (self.email, self.phone, self.contact_url) if p]
-        return "V Group" + (" | " + " | ".join(parts) if parts else "")
+        return "D Group" + (" | " + " | ".join(parts) if parts else "")
 
     def html(self) -> str:
         return escape(self.text())
@@ -67,7 +67,7 @@ def _feedback_block(links: dict[str, str]) -> tuple[str, str]:
 def summary_email(name: str | None, date_text: str, points: list[str], footer: Footer,
                   transcript_attached: bool, feedback_links: dict[str, str] | None) -> Rendered:
     bullets_text, bullets_html = _bullets(points)
-    intro = f"Thank you for chatting with V Group on {date_text}. Here is a short summary of our conversation:"
+    intro = f"Thank you for chatting with D Group on {date_text}. Here is a short summary of our conversation:"
     attach = "A full transcript of the chat is attached for your records." if transcript_attached else ""
     closing = ("If you have more questions, simply start a new chat on our website or contact us using "
                "the details below.")
@@ -79,21 +79,21 @@ def summary_email(name: str | None, date_text: str, points: list[str], footer: F
         fb_text, fb_html = _feedback_block(feedback_links)
         text_parts += [fb_text, ""]
         extra_html = fb_html
-    text_parts += [closing, "", "Best regards,", "The V Group team", "", footer.text()]
+    text_parts += [closing, "", "Best regards,", "The D Group team", "", footer.text()]
     html_pars = [escape(_greeting(name)), escape(intro)]
     html = _wrap_html(html_pars, footer, bullets_html + (f"<p>{escape(attach)}</p>" if attach else "") + extra_html
-                      + f"<p>{escape(closing)}</p><p>Best regards,<br>The V Group team</p>")
-    return Rendered("Your conversation with V Group - summary", "\n".join(text_parts), html)
+                      + f"<p>{escape(closing)}</p><p>Best regards,<br>The D Group team</p>")
+    return Rendered("Your conversation with D Group - summary", "\n".join(text_parts), html)
 
 
 def transcript_email(name: str | None, date_text: str, footer: Footer) -> Rendered:
-    text = (f"{_greeting(name)}\n\nAs requested, the transcript of your chat with V Group on {date_text} "
-            f"is attached as a text file.\n\nBest regards,\nThe V Group team\n\n{footer.text()}")
+    text = (f"{_greeting(name)}\n\nAs requested, the transcript of your chat with D Group on {date_text} "
+            f"is attached as a text file.\n\nBest regards,\nThe D Group team\n\n{footer.text()}")
     html = _wrap_html([escape(_greeting(name)),
-                       escape(f"As requested, the transcript of your chat with V Group on {date_text} is "
+                       escape(f"As requested, the transcript of your chat with D Group on {date_text} is "
                               f"attached as a text file."),
-                       "Best regards,<br>The V Group team"], footer)
-    return Rendered("Your V Group chat transcript", text, html)
+                       "Best regards,<br>The D Group team"], footer)
+    return Rendered("Your D Group chat transcript", text, html)
 
 
 def followup_email(name: str | None, date_text: str, reason: str, points: list[str], footer: Footer,
@@ -101,34 +101,34 @@ def followup_email(name: str | None, date_text: str, reason: str, points: list[s
     if reason == "idle_timeout":
         opener = (f"Our chat on {date_text} was closed because we didn't hear back from you for a while. "
                   f"No problem - here's a quick recap so you can pick up where you left off:")
-        subject = "Following up on your V Group chat"
+        subject = "Following up on your D Group chat"
     else:  # after a contact request
-        opener = (f"Thank you for reaching out to V Group on {date_text}. We've received your request, and "
+        opener = (f"Thank you for reaching out to D Group on {date_text}. We've received your request, and "
                   f"the relevant team will connect with you shortly. Here's a quick recap of the chat:")
-        subject = "We've received your request - V Group"
+        subject = "We've received your request - D Group"
     bullets_text, bullets_html = _bullets(points)
     attach = "The full chat transcript is attached." if transcript_attached else ""
     closing = "Whenever you're ready, start a new chat on our website or contact us using the details below."
     text = "\n".join([_greeting(name), "", opener, "", bullets_text, "", attach, "", closing, "",
-                      "Best regards,", "The V Group team", "", footer.text()])
+                      "Best regards,", "The D Group team", "", footer.text()])
     html = _wrap_html([escape(_greeting(name)), escape(opener)], footer,
                       bullets_html + (f"<p>{escape(attach)}</p>" if attach else "") + f"<p>{escape(closing)}</p>"
-                      "<p>Best regards,<br>The V Group team</p>")
+                      "<p>Best regards,<br>The D Group team</p>")
     return Rendered(subject, text, html)
 
 
 def feedback_email(name: str | None, date_text: str, links: dict[str, str], footer: Footer) -> Rendered:
     fb_text, fb_html = _feedback_block(links)
-    intro = f"Thank you for chatting with V Group on {date_text}. We'd love to hear how it went - it takes one click."
-    text = "\n".join([_greeting(name), "", intro, "", fb_text, "", "Best regards,", "The V Group team", "",
+    intro = f"Thank you for chatting with D Group on {date_text}. We'd love to hear how it went - it takes one click."
+    text = "\n".join([_greeting(name), "", intro, "", fb_text, "", "Best regards,", "The D Group team", "",
                       footer.text()])
     html = _wrap_html([escape(_greeting(name)), escape(intro)], footer,
-                      fb_html + "<p>Best regards,<br>The V Group team</p>")
-    return Rendered("How was your chat with V Group?", text, html)
+                      fb_html + "<p>Best regards,<br>The D Group team</p>")
+    return Rendered("How was your chat with D Group?", text, html)
 
 
 def team_lead_email(lead, points: list[str]) -> Rendered:
-    """Internal notification to the V Group team (not customer-facing)."""
+    """Internal notification to the D Group team (not customer-facing)."""
     fields = [("Name", lead.name), ("Email", lead.email), ("Phone", lead.phone or "-"),
               ("Company", lead.company or "-"), ("Interested in", lead.interest or "-"),
               ("Received", lead.created_at), ("Lead ID", lead.lead_id)]

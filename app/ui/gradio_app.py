@@ -25,7 +25,7 @@ from app.leads.service import LeadInput
 from app.services import Services
 from app.transcripts.builder import build_transcript, transcript_filename
 
-SOUND_JS_PATH = PROJECT_ROOT / "frontend" / "notification-sounds.js"
+SOUND_JS_PATH = PROJECT_ROOT / "app" / "static" / "widget" / "notification-sounds.js"
 _PLAY_JS = "(enabled, kind) => { if (window.vgSound) window.vgSound.setEnabled(enabled); if (enabled && kind && window.vgPlay) window.vgPlay(kind); }"
 _SENT_JS = "(enabled) => { if (window.vgSound) window.vgSound.setEnabled(enabled); if (enabled && window.vgPlay) window.vgPlay('sent'); }"
 
@@ -160,15 +160,15 @@ def build_demo(services: Services) -> tuple[gr.Blocks, str]:
             rows.append(f"- **{msg['Subject']}** to {msg['To']} - `{f.name}`")
         return "\n".join(rows)
 
-    with gr.Blocks(title="V Group AI Assistant") as demo:
-        gr.Markdown("## V Group AI Assistant - Phase 2 prototype")
+    with gr.Blocks(title="D Group AI Assistant") as demo:
+        gr.Markdown("## D Group AI Assistant - Phase 2 prototype")
         sid = gr.State("")
         last_seq = gr.State(0)
         sound_kind = gr.Textbox(visible=False)
         with gr.Row():
             with gr.Column(scale=3):
                 chat = gr.Chatbot(height=470, label="Chat")
-                msg = gr.Textbox(placeholder="Ask about V Group services, pricing, support, portfolio...", show_label=False)
+                msg = gr.Textbox(placeholder="Ask about D Group services, pricing, support, portfolio...", show_label=False)
                 with gr.Row():
                     send = gr.Button("Send", variant="primary")
                     new_btn = gr.Button("New chat")
@@ -179,7 +179,7 @@ def build_demo(services: Services) -> tuple[gr.Blocks, str]:
                              "This is so frustrating, my store keeps crashing!", "I want to talk to your sales team",
                              "Tell me a joke"], inputs=msg)
                 with gr.Group(visible=False) as form:
-                    gr.Markdown("### Connect with the V Group team")
+                    gr.Markdown("### Connect with the D Group team")
                     f_name = gr.Textbox(label="Full name *")
                     f_email = gr.Textbox(label="Email *")
                     f_phone = gr.Textbox(label="Phone")

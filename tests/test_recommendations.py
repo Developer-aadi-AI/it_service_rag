@@ -19,7 +19,7 @@ def test_catalog_only_contains_supplied_service_pages(engine, real_settings):
     urls = {r["url"] for r in load_raw(real_settings.data_path)}
     items = engine.catalog.items
     assert len(items) >= 30
-    assert all(i.url in urls for i in items), "every recommendation is a real V Group page"
+    assert all(i.url in urls for i in items), "every recommendation is a real D Group page"
     assert not any("contact-form" in i.url or i.url.rstrip("/").endswith("/services") for i in items)
     assert {i.kind for i in items} <= {"service", "package", "product", "app"}
 

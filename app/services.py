@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
 
+from app.analytics.events import EventRecorder
 from app.config import Settings
 from app.conversation.followup import FollowUpRewriter
 from app.conversation.manager import ConversationManager
@@ -30,6 +31,7 @@ class Services:
     emails: EmailService
     catalog: ServiceCatalog
     manager: ConversationManager
+    events: EventRecorder
 
     def shutdown(self) -> None:
         self.emails.shutdown()
@@ -41,9 +43,12 @@ def build_services(settings: Settings, bundle: PipelineBundle, *, clock: Callabl
                    store: SessionStore | None = None) -> Services:
     pipeline = bundle.pipeline
     db = Database(settings.db_path)
+    events = EventRecorder(db, clock, settings.analytics_enabled, settings.analytics_store_questions)
+    pipeline.events = events
     feedback = FeedbackService(db, clock, settings.app_secret_key)
     emails = EmailService(email_sender or create_sender(settings), settings, db, feedback,
-                          contact=pipeline.contact, llm=pipeline.llm, clock=clock, background=background_email)
+                          contact=pipeline.contact, llm=pipeline.llm, clock=clock, background=background_email,
+                          events=events)
     leads = LeadService(db, clock)
     catalog = ServiceCatalog.from_store(bundle.store)
     recommender = RecommendationEngine(catalog, pipeline.retriever.embedder,
@@ -51,5 +56,5 @@ def build_services(settings: Settings, bundle: PipelineBundle, *, clock: Callabl
     rewriter = FollowUpRewriter(pipeline.retriever, pipeline.llm, settings.domain_threshold)
     store = store or InMemorySessionStore()
     manager = ConversationManager(settings, pipeline, store, leads, emails, feedback, recommender=recommender,
-                                  rewriter=rewriter, clock=clock)
-    return Services(settings, bundle, db, store, leads, feedback, emails, catalog, manager)
+                                  rewriter=rewriter, clock=clock, events=events)
+    return Services(settings, bundle, db, store, leads, feedback, emails, catalog, manager, events)

@@ -1,4 +1,4 @@
-"""Load, validate, clean and enrich the supplied V Group dataset.
+"""Load, validate, clean and enrich the supplied D Group dataset.
 
 Decisions here are based on inspecting `Database/final_dataset.json`:
 * 134 records with fields page_id, url, title, text, source_type, platform.
@@ -253,7 +253,7 @@ def clean_record(rec: dict[str, str]) -> Document | None:
             # Title-only portfolio entries: keep a minimal, fact-only record.
             content_quality = "title_only"
             plat = f" on {platform}" if platform else ""
-            text = f"{title} is a client project listed in V Group's portfolio{plat}."
+            text = f"{title} is a client project listed in D Group's portfolio{plat}."
         elif not text:
             logger.info("dropping %s: empty text", rec["page_id"])
             return None

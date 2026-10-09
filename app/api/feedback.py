@@ -24,7 +24,7 @@ def chat_feedback(session_id: str, body: FeedbackRequest, svc: Services = Depend
 
 def _page(title: str, text: str, status: int = 200) -> HTMLResponse:
     html = ("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" "
-            "content=\"width=device-width,initial-scale=1\"><title>V Group feedback</title></head>"
+            "content=\"width=device-width,initial-scale=1\"><title>D Group feedback</title></head>"
             "<body style=\"font-family:Arial,Helvetica,sans-serif;background:#f5f6f8;margin:0;padding:40px 16px\">"
             "<div style=\"max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:28px\">"
             f"<h2 style=\"margin-top:0\">{escape(title)}</h2><p>{escape(text)}</p></div></body></html>")
