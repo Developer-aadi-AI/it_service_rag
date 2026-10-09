@@ -112,9 +112,9 @@ def test_transcript_download(api):
     send(api, sid, "What is SMTU?")
     r = api.get(f"/sessions/{sid}/transcript")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/plain")
-    assert re.search(r'attachment; filename="vgroup-chat-transcript-\d{8}-\d{4}-[0-9a-f]{8}\.txt"',
+    assert re.search(r'attachment; filename="dgroup-chat-transcript-\d{8}-\d{4}-[0-9a-f]{8}\.txt"',
                      r.headers["content-disposition"])
-    assert "V Group - Chat Transcript" in r.text and "What is SMTU?" in r.text
+    assert "D Group - Chat Transcript" in r.text and "What is SMTU?" in r.text
 
 
 def test_email_endpoint(api):

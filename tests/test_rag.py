@@ -70,7 +70,7 @@ def test_extractive_answers_are_verbatim_from_cited_pages(real_bundle, real_sett
 
 
 def test_citation_numbers_match_sources(real_bundle):
-    r = real_bundle.pipeline.answer("What is included in V Group's Annual Support?")
+    r = real_bundle.pipeline.answer("What is included in D Group's Annual Support?")
     numbers = {s.number for s in r.sources}
     import re
     markers = {int(n) for n in re.findall(r"\[(\d+)\]", r.answer)}
@@ -123,7 +123,7 @@ def test_llm_grounded_answer_and_citations(real_bundle, real_settings, fake_llm_
     call = llm.calls[0]
     assert call["system"] == GROUNDED_SYSTEM_PROMPT and call["schema"] is not None
     user_msg = call["messages"][-1]["content"]
-    assert "CONTEXT:" in user_msg and "[1]" in user_msg and "QUESTION:" in user_msg
+    assert "<context>" in user_msg and "<source id=\"1\"" in user_msg and "<customer_question>" in user_msg
     assert "120" in user_msg, "retrieved context is passed to the LLM"
 
 
@@ -135,7 +135,7 @@ def test_llm_invalid_citations_removed(real_bundle, real_settings, fake_llm_fact
 
 def test_llm_uncited_answer_is_not_trusted(real_bundle, real_settings, fake_llm_factory):
     llm = fake_llm_factory([_answer_json("We have offices on the moon.", [])])
-    r = _pipeline_with(real_bundle, real_settings, llm).answer("Where is V Group's US head office?")
+    r = _pipeline_with(real_bundle, real_settings, llm).answer("Where is D Group's US head office?")
     assert r.status == "needs_team" and r.action["type"] == "contact_form"
 
 
@@ -162,7 +162,7 @@ def test_triage_llm_used_for_domain_band(real_bundle, real_settings, fake_llm_fa
     llm = fake_llm_factory(['{"category": "off_topic"}'])
     r = _pipeline_with(real_bundle, real_settings, llm).answer("What is the CEO's name?")
     assert r.status == "off_topic" and r.generator == "triage-llm"
-    assert "V Group offerings" in llm.calls[0]["system"]
+    assert "D Group offerings" in llm.calls[0]["system"]
 
 
 def test_pipeline_never_leaks_exceptions(real_bundle, real_settings):
@@ -219,5 +219,27 @@ def test_generic_faq_does_not_answer_unrelated_project(real_bundle, q):
 
 
 def test_full_case_study_preferred_over_title_stub(real_bundle):
-    r = real_bundle.pipeline.answer("What did V Group build for Westcott?")
+    r = real_bundle.pipeline.answer("What did D Group build for Westcott?")
     assert any(s.page_id == "case-study-shopify-6" for s in r.sources)
+
+
+def test_llm_status_schema_slip_is_tolerated(real_bundle, real_settings, fake_llm_factory):
+    """Smaller models sometimes put the request kind into `status`; don't discard a cited answer."""
+    slip = json.dumps({"status": "information_request", "answer": "You get 120 hours of service per year [1].",
+                       "citations": [1], "request_kind": "other"})
+    no_answer = json.dumps({"status": "project_request", "answer": "", "citations": [], "request_kind": "other"})
+    llm = fake_llm_factory([slip, no_answer])
+    p = _pipeline_with(real_bundle, real_settings, llm)
+    r = p.answer("How many support hours are included annually?")
+    assert r.status == "answered" and r.generator == "llm" and "120" in r.answer
+    r2 = p.answer("Can you build an online appointment booking system for my clinic?")
+    assert r2.status == "needs_team"
+
+
+def test_uncited_but_supported_answer_gets_citation(real_bundle, real_settings, fake_llm_factory):
+    supported = json.dumps({"status": "answered", "citations": [], "request_kind": "information_request",
+                            "answer": "You get 120 hours of expert service annually for support and store enhancements."})
+    r = _pipeline_with(real_bundle, real_settings, fake_llm_factory([supported])).answer(
+        "How many support hours are included annually?")
+    assert r.status == "answered" and r.sources and r.answer.endswith("]")
+    assert r.sources[0].page_id == "db-425"

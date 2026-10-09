@@ -1,0 +1,204 @@
+{
+  "timestamp": "2026-10-09T19:12:49+00:00",
+  "mode": "extractive",
+  "dataset_version": 2,
+  "retrieval": {
+    "hit_at_k": 1.0,
+    "mrr": 0.956,
+    "k": 5,
+    "precision_at_k": 0.294,
+    "n": 47,
+    "multi_chunk_page_recall": 1.0
+  },
+  "answers": {
+    "n": 47,
+    "answer_rate": 1.0,
+    "fact_recall": 0.872,
+    "citation_accuracy": 0.936,
+    "all_facts": 0.809,
+    "grounding_rate": 1.0,
+    "fully_grounded_answers": 1.0,
+    "invalid_citations": 0,
+    "by_category": {
+      "factual": {
+        "n": 29,
+        "answer_rate": 1.0,
+        "fact_recall": 0.862,
+        "citation_accuracy": 0.931,
+        "all_facts": 0.828
+      },
+      "service": {
+        "n": 13,
+        "answer_rate": 1.0,
+        "fact_recall": 0.846,
+        "citation_accuracy": 0.923,
+        "all_facts": 0.846
+      },
+      "multi_chunk": {
+        "n": 5,
+        "answer_rate": 1.0,
+        "fact_recall": 1.0,
+        "citation_accuracy": 1.0,
+        "all_facts": 0.6
+      }
+    }
+  },
+  "follow_up": {
+    "n": 6,
+    "fact_recall": 1.0,
+    "citation_accuracy": 1.0,
+    "rewrite_rate": 1.0,
+    "grounding_rate": 1.0
+  },
+  "no_answer": {
+    "n": 8,
+    "routed_to_team": 1.0,
+    "request_kind_accuracy": 0.875
+  },
+  "hallucination": {
+    "n": 7,
+    "resistance": 1.0
+  },
+  "off_topic": {
+    "n": 12,
+    "accuracy": 1.0
+  },
+  "ambiguous": {
+    "n": 6,
+    "acceptable": 1.0
+  },
+  "latency_ms": {
+    "mean": 979.1,
+    "p95": 3174.2,
+    "questions": 80
+  },
+  "duration_s": 116.1,
+  "generators": {
+    "extractive": 74,
+    "contact-info": 3,
+    "triage-rules": 3,
+    "rules": 12,
+    "llm_answer_share": 0.0
+  },
+  "checks": {
+    "retrieval.hit_at_k": {
+      "value": 1.0,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "retrieval.mrr": {
+      "value": 0.956,
+      "threshold": 0.75,
+      "passed": true
+    },
+    "answers.answer_rate": {
+      "value": 1.0,
+      "threshold": 0.85,
+      "passed": true
+    },
+    "answers.fact_recall": {
+      "value": 0.872,
+      "threshold": 0.75,
+      "passed": true
+    },
+    "answers.citation_accuracy": {
+      "value": 0.936,
+      "threshold": 0.8,
+      "passed": true
+    },
+    "answers.grounding_rate": {
+      "value": 1.0,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "answers.invalid_citations": {
+      "value": 0,
+      "threshold": 0,
+      "passed": true
+    },
+    "follow_up.fact_recall": {
+      "value": 1.0,
+      "threshold": 0.6,
+      "passed": true
+    },
+    "no_answer.routed_to_team": {
+      "value": 1.0,
+      "threshold": 0.8,
+      "passed": true
+    },
+    "hallucination.resistance": {
+      "value": 1.0,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "off_topic.accuracy": {
+      "value": 1.0,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "ambiguous.acceptable": {
+      "value": 1.0,
+      "threshold": 0.8,
+      "passed": true
+    }
+  },
+  "failures": [
+    {
+      "category": "factual",
+      "question": "Which brands has D Group worked with?",
+      "reason": "cited page does not contain the answer",
+      "cited": [
+        "db-66"
+      ],
+      "answer": "We offer what fits best for your brand. [1]\n\nIs there anything else you'd like to know?"
+    },
+    {
+      "category": "factual",
+      "question": "What did you build for the New York State Education Department?",
+      "reason": "expected fact missing from answer",
+      "expected": [
+        "NYSED",
+        "New York State Education Department"
+      ],
+      "answer": "Its digital presence serves millions of residents, educators, professionals, and institutions through a large multi department governance structure with centralized administrative oversight. The engag"
+    },
+    {
+      "category": "factual",
+      "question": "How much is the Shopify Gold plan in GBP?",
+      "reason": "cited page does not contain the answer",
+      "cited": [
+        "db-1859"
+      ],
+      "answer": "The Shopify packages price varies based on the plan you have. Our Silver Plan begins at $3,999 and Gold Plan begins at $5,999. Both the plans are one-time charges and include design, development, and "
+    },
+    {
+      "category": "factual",
+      "question": "Which partner certifications does D Group's team have?",
+      "reason": "expected fact missing from answer",
+      "expected": [
+        "Acquia",
+        "Shopify Partner",
+        "Shopify Expert"
+      ],
+      "answer": "With D Group's Global Partner Program, you gain not just expertise in digital transformation but a dedicated team that helps you evolve, optimize, and commercialize services with confidence. [3] D Gro"
+    },
+    {
+      "category": "service",
+      "question": "Can I hire a PHP developer from D Group?",
+      "reason": "expected fact missing from answer",
+      "expected": [
+        "PHP"
+      ],
+      "answer": "D Group is here to assist you whether you are creating a new application, modifying an existing one, or trying to scale. You can rely on certified and seasoned experts at D Group. Finding the right fi"
+    },
+    {
+      "category": "service",
+      "question": "What platforms does D Group work with?",
+      "reason": "cited page does not contain the answer",
+      "cited": [
+        "db-298"
+      ],
+      "answer": "D Group develops hybrid solutions that work effortlessly across iOS, Android, and Windows platforms. [3]\n\nLet me know if you'd like more details."
+    }
+  ]
+}

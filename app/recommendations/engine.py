@@ -1,6 +1,6 @@
 """Primary and related service recommendations from the supplied catalog.
 
-The catalog is built only from the indexed V Group pages (services, hire-a-
+The catalog is built only from the indexed D Group pages (services, hire-a-
 developer pages, Shopify apps, packages, products). Each item is represented
 by the centroid of its chunk embeddings.
 

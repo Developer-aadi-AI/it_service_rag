@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 storage/
 .ipynb_checkpoints/
+
+# generated reports (keep latest.md / history.csv)
+reports/evaluation/eval-*.json

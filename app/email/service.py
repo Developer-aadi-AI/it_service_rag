@@ -30,7 +30,7 @@ EmailType = Literal["transcript", "summary", "followup", "feedback"]
 class EmailService:
     def __init__(self, sender: EmailSender, settings, db: Database, feedback: FeedbackService,
                  contact: ContactInfo | None = None, llm: LLMClient | None = None,
-                 clock: Callable | None = None, background: bool = True) -> None:
+                 clock: Callable | None = None, background: bool = True, events=None) -> None:
         self.sender = sender
         self.settings = settings
         self.db = db
@@ -43,6 +43,7 @@ class EmailService:
                                  phone=(office.phone if office else ""),
                                  contact_url=(contact.url if contact else ""))
         self._lock = threading.Lock()
+        self.events = events
 
     @property
     def enabled(self) -> bool:
@@ -67,11 +68,21 @@ class EmailService:
             logger.exception("could not write email log")
         if status == "sent":
             logger.info("email %s sent to %s via %s", email.email_type, mask_email(email.to), self.sender.name)
+        if self.events is not None:
+            self.events.record("email", email.session_id, email_type=email.email_type, status=status)
+            if error:
+                self.events.error("email", error, email.session_id)
         return status == "sent"
 
     def _submit(self, build: Callable[[], OutgoingEmail | None]) -> Future | None:
         def job() -> bool:
-            email = build()
+            try:
+                email = build()
+            except Exception as exc:  # template/summary failure: log it, never lose it silently
+                logger.exception("could not build email")
+                if self.events is not None:
+                    self.events.error("email_build", exc)
+                return False
             return self._deliver(email) if email else False
 
         if not self.enabled:

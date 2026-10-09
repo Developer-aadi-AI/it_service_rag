@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     # --- App -----------------------------------------------------------
-    app_name: str = "V Group AI Assistant"
+    app_name: str = "D Group AI Assistant"
     environment: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
     cors_origins: str = "*"  # comma separated
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
 
     # --- Vector store --------------------------------------------------
     vector_store: Literal["chroma", "numpy"] = "chroma"
-    collection_name: str = "vgroup_knowledge"
+    collection_name: str = "dgroup_knowledge"
     rebuild_index_on_change: bool = True
 
     # --- Retrieval -----------------------------------------------------
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # (see README "Threshold calibration"). Re-calibrate if the embedding model changes.
     # Hybrid score (0..1) at/above which a chunk is trusted as answer context.
     similarity_threshold: float = Field(0.55, ge=0.0, le=1.0)
-    # Below similarity_threshold but at/above this: the question is in V Group's
+    # Below similarity_threshold but at/above this: the question is in D Group's
     # domain, but the knowledge base has no specific answer -> route to the team.
     domain_threshold: float = Field(0.52, ge=0.0, le=1.0)
     max_chunks_per_page: int = Field(2, ge=1, le=10)
@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     openai_api_key: str | None = None
     gemini_api_key: str | None = None
+    google_api_key: str | None = None  # accepted as an alias for GEMINI_API_KEY
 
     # --- Input limits --------------------------------------------------
     max_question_chars: int = Field(1000, ge=10)
@@ -111,14 +112,14 @@ class Settings(BaseSettings):
     sentiment_escalate_after: int = Field(2, ge=1, description="consecutive frustrated turns before offering the team")
 
     # --- Storage ---
-    database_path: Path | None = None  # default: <storage_dir>/vgroup.db
+    database_path: Path | None = None  # default: <storage_dir>/dgroup.db
     transcripts_dir: Path | None = None  # default: <storage_dir>/transcripts
     save_transcripts_on_close: bool = True
 
     # --- Email ---
     email_backend: Literal["file", "smtp", "disabled"] = "file"  # file = write .eml to the outbox (dev)
     email_outbox_dir: Path | None = None  # default: <storage_dir>/outbox
-    email_from: str = "V Group <no-reply@example.com>"
+    email_from: str = "D Group <no-reply@example.com>"
     email_reply_to: str | None = None
     team_notification_email: str | None = None  # internal address notified of new leads
     smtp_host: str | None = None
@@ -133,9 +134,29 @@ class Settings(BaseSettings):
     public_base_url: str = "http://127.0.0.1:8000"  # used to build feedback links in emails
     app_secret_key: str | None = None  # signs feedback links; random per process when unset
 
+    # ======================= Phase 3: operations ========================
+    log_format: Literal["text", "json"] = "text"
+    log_requests: bool = True
+    # Analytics / admin endpoints are disabled unless an admin key is set (send it as X-Admin-Key).
+    admin_api_key: str | None = None
+    analytics_enabled: bool = True
+    analytics_store_questions: bool = True  # scrubbed + truncated, for "top questions"
+
+    # Abuse protection
+    rate_limit_enabled: bool = True
+    rate_limit_per_minute: int = Field(60, ge=1, description="requests per client IP per minute (API)")
+    rate_limit_sessions_per_hour: int = Field(30, ge=1, description="new chat sessions per IP per hour")
+    trust_proxy_headers: bool = False  # use X-Forwarded-For only behind a trusted reverse proxy
+    max_request_bytes: int = Field(64 * 1024, ge=1024)
+    max_active_sessions: int = Field(5000, ge=10, description="cap on in-memory sessions")
+    email_max_per_session: int = Field(5, ge=1, description="customer emails one chat may trigger")
+
+    # Performance
+    embedding_cache_size: int = Field(8192, ge=0, description="cached query/sentence embeddings (0 = off)")
+
     @property
     def db_path(self) -> Path:
-        return self.database_path or self.storage_dir / "vgroup.db"
+        return self.database_path or self.storage_dir / "dgroup.db"
 
     @property
     def transcripts_path(self) -> Path:
@@ -145,8 +166,23 @@ class Settings(BaseSettings):
     def outbox_path(self) -> Path:
         return self.email_outbox_dir or self.storage_dir / "outbox"
 
+    def production_problems(self) -> list[str]:
+        """Settings that are unsafe in production (startup refuses to run with them)."""
+        problems = []
+        if not self.app_secret_key or len(self.app_secret_key) < 32:
+            problems.append("APP_SECRET_KEY must be set to a random value of at least 32 characters")
+        if "*" in self.cors_origin_list:
+            problems.append("CORS_ORIGINS must list the allowed website origins (not '*')")
+        if self.admin_api_key is not None and len(self.admin_api_key) < 24:
+            problems.append("ADMIN_API_KEY must be at least 24 characters")
+        if not self.public_base_url.startswith("https://"):
+            problems.append("PUBLIC_BASE_URL must be an https:// URL")
+        return problems
+
     @model_validator(mode="after")
     def _check_thresholds(self) -> "Settings":
+        if self.environment == "production" and self.production_problems():
+            raise ValueError("unsafe production configuration: " + "; ".join(self.production_problems()))
         if self.email_backend == "smtp" and not self.smtp_host:
             raise ValueError("EMAIL_BACKEND=smtp requires SMTP_HOST")
         if self.domain_threshold > self.similarity_threshold:

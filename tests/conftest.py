@@ -154,7 +154,7 @@ def make_client(services, settings_override=None):
     from app.config import get_settings
     from app.main import create_app
 
-    app = create_app()
+    app = create_app(settings_override or services.settings)
     app.state.services = services
     app.state.owns_services = False
     app.dependency_overrides[get_settings] = lambda: settings_override or services.settings

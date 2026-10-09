@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>D Group Assistant</title>
+  <link rel="stylesheet" href="widget.css">
+</head>
+<body>
+  <main class="vg-chat" aria-label="D Group chat assistant">
+    <header class="vg-header">
+      <div>
+        <h1>D Group Assistant</h1>
+        <p id="vg-status" class="vg-status" aria-live="polite">Connecting...</p>
+      </div>
+      <div class="vg-tools">
+        <button type="button" id="vg-sound" class="vg-icon" aria-pressed="true" title="Notification sounds">Sound: on</button>
+        <button type="button" id="vg-transcript" class="vg-icon" title="Download transcript">Transcript</button>
+        <button type="button" id="vg-end" class="vg-icon" title="End chat">End chat</button>
+      </div>
+    </header>
+
+    <section id="vg-log" class="vg-log" aria-live="polite" aria-relevant="additions"></section>
+
+    <section id="vg-recs" class="vg-recs" hidden></section>
+
+    <form id="vg-contact" class="vg-panel" hidden novalidate>
+      <h2>Connect with the D Group team</h2>
+      <label>Full name *<input name="name" autocomplete="name" required maxlength="100"></label>
+      <label>Email *<input name="email" type="email" autocomplete="email" required maxlength="254"></label>
+      <label>Phone<input name="phone" type="tel" autocomplete="tel" maxlength="20"></label>
+      <label>Company<input name="company" autocomplete="organization" maxlength="120"></label>
+      <label>How can we help? *<textarea name="message" rows="3" required maxlength="2000"></textarea></label>
+      <p class="vg-error" id="vg-contact-error" role="alert"></p>
+      <button type="submit" class="vg-primary">Submit</button>
+    </form>
+
+    <section id="vg-feedback" class="vg-panel" hidden>
+      <h2>How was your experience today?</h2>
+      <div class="vg-row">
+        <button type="button" data-rating="Great">Great</button>
+        <button type="button" data-rating="OK">OK</button>
+        <button type="button" data-rating="Poor">Poor</button>
+      </div>
+    </section>
+
+    <form id="vg-email" class="vg-panel vg-inline" hidden novalidate>
+      <label>Email me the transcript<input name="email" type="email" maxlength="254" placeholder="you@example.com"></label>
+      <button type="submit">Send</button>
+      <p class="vg-error" id="vg-email-msg" role="status"></p>
+    </form>
+
+    <form id="vg-composer" class="vg-composer">
+      <label class="vg-sr" for="vg-input">Message</label>
+      <input id="vg-input" autocomplete="off" maxlength="1000" placeholder="Ask about D Group services, pricing, support...">
+      <button type="submit" class="vg-primary">Send</button>
+    </form>
+    <p class="vg-footer"><button type="button" id="vg-email-toggle" class="vg-link">Email transcript</button>
+      <button type="button" id="vg-new" class="vg-link" hidden>Start a new chat</button></p>
+  </main>
+  <script src="notification-sounds.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>

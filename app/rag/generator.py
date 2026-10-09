@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -21,7 +22,7 @@ from app.ingestion.loader import split_sentences
 from app.llm.base import LLMClient, LLMError
 from app.rag import intent
 from app.rag.humanize import clean_sentence, compose_answer, is_fragment, plan_price_sentences
-from app.rag.prompts import (GROUNDED_SCHEMA, GROUNDED_SYSTEM_PROMPT, TRIAGE_SCHEMA, TRIAGE_SYSTEM_PROMPT,
+from app.rag.prompts import (leaks_prompt, GROUNDED_SCHEMA, GROUNDED_SYSTEM_PROMPT, TRIAGE_SCHEMA, TRIAGE_SYSTEM_PROMPT,
                              ContextSource, build_context, build_user_message)
 from app.retrieval.lexical import tokenize
 
@@ -83,15 +84,27 @@ class LLMGenerator:
                  history: list[dict[str, str]] | None = None, overview: bool = False) -> GenerationResult:
         context = build_context(sources, self.max_context_chars)
         messages = [*(history or []), {"role": "user", "content": build_user_message(question, context)}]
-        raw = self.llm.complete(GROUNDED_SYSTEM_PROMPT, messages, json_schema=GROUNDED_SCHEMA)
+        started = time.perf_counter()
+        try:
+            raw = self.llm.complete(GROUNDED_SYSTEM_PROMPT, messages, json_schema=GROUNDED_SCHEMA)
+        finally:
+            logger.info("llm provider=%s model=%s latency_ms=%d", self.llm.provider, self.llm.model,
+                        int((time.perf_counter() - started) * 1000))
+        logger.debug("llm raw response: %s", raw[:500])
         try:
             data = parse_json_object(raw)
         except (json.JSONDecodeError, ValueError) as exc:
             raise LLMError("LLM returned invalid JSON") from exc
 
         status = data.get("status")
+        if status in ("project_request", "information_request") and data.get("request_kind") in (None, "", "other"):
+            data["request_kind"] = status  # smaller models sometimes swap the two fields
         if status not in ("answered", "needs_team", "off_topic"):
-            raise LLMError(f"LLM returned unknown status {status!r}")
+            # Tolerate schema slips: a cited answer is still an answer; anything else goes to the team.
+            has_answer = bool(str(data.get("answer", "")).strip()) and bool(data.get("citations"))
+            logger.warning("LLM returned unexpected status %r; treating as %s", status,
+                           "answered" if has_answer else "needs_team")
+            status = "answered" if has_answer else "needs_team"
         kind = data.get("request_kind") if data.get("request_kind") in (
             "project_request", "information_request", "other") else "other"
         if status != "answered":
@@ -103,9 +116,26 @@ class LLMGenerator:
         citations = list(dict.fromkeys(used + cited))
         if not answer:
             return GenerationResult(status="needs_team", request_kind=kind, generator=self.name)
+        cited_types = {s.source_type for s in sources if s.number in citations}
+        if cited_types and cited_types <= {"blog-post", "blog-index"} and (
+                kind == "project_request" or _PRICE_Q.search(question) or intent.is_project_request(question)):
+            # Blog articles explain topics; they cannot confirm that D Group offers or prices something.
+            logger.info("answer only backed by blog posts for an offer/price question; routing to team")
+            return GenerationResult(status="needs_team", request_kind=kind if kind != "other" else "project_request",
+                                    generator=self.name)
+        if leaks_prompt(answer):
+            logger.warning("LLM answer echoed internal instructions; discarded")
+            return GenerationResult(status="needs_team", request_kind=kind, generator=self.name)
         if not citations:
-            # Grounding guard: an answer that cites nothing is not trusted.
-            logger.warning("LLM answer without citations; routing to team")
+            # Citation repair: some models answer correctly but forget the [n] markers. Accept the
+            # answer only if its content words are clearly found in one retrieved source.
+            best = max(sources, key=lambda s: _support_ratio(answer, " ".join(h.text for h in s.hits)), default=None)
+            ratio = _support_ratio(answer, " ".join(h.text for h in best.hits)) if best else 0.0
+            if best is not None and ratio >= 0.6:
+                logger.info("LLM answer without citations; attached source [%d] (support %.2f)", best.number, ratio)
+                return GenerationResult("answered", f"{answer.rstrip()} [{best.number}]", [best.number], kind, self.name)
+            # Grounding guard: an uncited answer that the sources don't clearly support is not trusted.
+            logger.warning("LLM answer without citations (support %.2f); routing to team", ratio)
             return GenerationResult(status="needs_team", request_kind=kind, generator=self.name)
         return GenerationResult("answered", answer, citations, kind, self.name)
 
@@ -127,7 +157,22 @@ _PLATFORMS = set("""shopify magento bigcommerce wordpress woocommerce drupal wix
 amazon""".split())
 
 
+_PRICE_Q = re.compile(r"\b(cost|costs|price|prices|pricing|charge|charges|how much|fee|fees|quote)\b", re.I)
 _RAW_PLAN_PRICE = re.compile(r"\b(?:Silver|Gold|Platinum|Bronze|Basic|Premium|Starter|Pro)\s+Plan:?\s*[$£]")
+
+
+def _support_ratio(answer: str, source_text: str) -> float:
+    """Share of the answer's content words (5-char stems) that occur in the source text."""
+    words = {t[:5] for t in tokenize(answer)}
+    if not words:
+        return 0.0
+    src = {t[:5] for t in tokenize(source_text)}
+    return len(words & src) / len(words)
+
+
+def _caps_ratio(text: str) -> float:
+    words = text.split()
+    return sum(1 for w in words if w[:1].isupper() or w[:1].isdigit() or w[:1] in "$£") / max(1, len(words))
 
 
 def _stem(token: str) -> str:
@@ -181,7 +226,7 @@ class ExtractiveGenerator:
         pos = 0
         for src in sources:
             if project and src.source_type in _ARTICLE_TYPES:
-                continue  # articles describe topics, not what V Group will build
+                continue  # articles describe topics, not what D Group will build
             prior = _SOURCE_PRIOR.get(src.source_type, 0.0)
             if overview and src.source_type in ("about", "home"):
                 prior += 0.08  # company overview: prefer the About/Home pages
@@ -208,12 +253,12 @@ class ExtractiveGenerator:
                 for raw in split_sentences(hit.text):
                     if raw.endswith("?"):
                         continue  # questions/headings are not answers
-                    if price_sents and _RAW_PLAN_PRICE.search(raw):
-                        continue  # raw price-table text; the clean price sentences replace it
+                    if _RAW_PLAN_PRICE.search(raw) and (price_sents or _caps_ratio(raw) > 0.4):
+                        continue  # flattened price table; clean price sentences replace it
                     sent = clean_sentence(raw)
                     if not sent or (meta.get("content_quality") != "title_only" and is_fragment(sent)):
                         continue  # menus, headings, flattened tables
-                    # Score with the page title attached: "About V Group. Our journey started in 1999..."
+                    # Score with the page title attached: "About D Group. Our journey started in 1999..."
                     out.append((f"{src.title}. {sent}", sent, src.number, hit_prior, pos))
                     pos += 1
         seen: set[str] = set()
@@ -250,6 +295,13 @@ class ExtractiveGenerator:
             cands = [c for c in cands if c[2] not in stub_sources]
         if overview:  # an overview needs substantive sentences, not taglines
             cands = [c for c in cands if len(c[1].split()) >= 12] or cands
+        # "When...?" is answered by a date and "How many...?" by a number: if such sentences exist, use only them.
+        if re.match(r"\s*(when|since when|what year)\b", question, re.I):
+            dated = [c for c in cands if re.search(r"\b(19|20)\d\d\b", c[1])]
+            cands = dated or cands
+        elif re.match(r"\s*how many\b", question, re.I):
+            counted = [c for c in cands if re.search(r"\d", c[1])]
+            cands = counted or cands
         if not cands:
             return GenerationResult("needs_team", request_kind=kind, generator=self.name)
 
@@ -257,6 +309,8 @@ class ExtractiveGenerator:
         q_vec = self.embedder.embed_query(question)
         coverage = np.array([len(q_tokens & set(tokenize(c[0]))) / max(1, len(q_tokens)) for c in cands])
         priors = np.array([c[3] for c in cands])
+        if re.match(r"\s*how (many|much|long|soon|fast|quickly)\b", question, re.I):  # quantities answer "how many"
+            priors = priors + np.array([0.06 if re.search(r"\d", c[1]) else 0.0 for c in cands])
         if re.match(r"\s*(when|since when|what year)\b", question, re.I):  # dates answer "when"
             priors = priors + np.array([0.06 if re.search(r"\b(19|20)\d\d\b", c[1]) else 0.0 for c in cands])
         scores = vecs @ q_vec + 0.15 * coverage + priors

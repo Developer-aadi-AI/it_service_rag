@@ -18,6 +18,7 @@ API, the background monitor and the Gradio prototype share one implementation.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable
@@ -27,10 +28,11 @@ from pydantic import EmailStr, TypeAdapter, ValidationError
 from app.conversation import intents
 from app.conversation.followup import FollowUpRewriter
 from app.conversation.models import CloseReason, Message, Session, utc_now
-from app.conversation.store import SessionClosed, SessionStore
+from app.analytics.events import EventRecorder
+from app.conversation.store import SessionClosed, SessionLimitReached, SessionStore
 from app.email.service import EmailService
 from app.feedback.service import FEEDBACK_THANKS, RATINGS, FeedbackService
-from app.leads.service import LeadInput, LeadService
+from app.leads.service import LeadCaptureError, LeadInput, LeadService, lead_confirmation
 from app.logging_config import redact
 from app.rag import intent as rag_intent
 from app.rag.pipeline import RAGPipeline, RAGResponse
@@ -44,9 +46,13 @@ logger = logging.getLogger(__name__)
 _EMAIL = TypeAdapter(EmailStr)
 
 CONTACT_PROMPT = ("Of course - I'd be happy to connect you with our team. Please share your details in the form "
-                  "below, and the right V Group specialist will connect with you shortly.")
+                  "below, and the right D Group specialist will connect with you shortly.")
 ANYTHING_ELSE_YES = "Of course - what else can I help you with?"
 FEEDBACK_ACTION = {"type": "feedback", "prompt": "How was your experience today?", "options": list(RATINGS)}
+
+
+class EmailLimitReached(RuntimeError):
+    """This chat already sent the maximum number of emails."""
 
 
 def _attempts_text(remaining: int) -> str:
@@ -77,7 +83,7 @@ class ConversationManager:
                  recommender: RecommendationEngine | None = None,
                  rewriter: FollowUpRewriter | None = None,
                  analyzer: SentimentAnalyzer | None = None,
-                 clock: Callable[[], datetime] = utc_now) -> None:
+                 clock: Callable[[], datetime] = utc_now, events: EventRecorder | None = None) -> None:
         self.settings = settings
         self.pipeline = pipeline
         self.store = store
@@ -88,6 +94,7 @@ class ConversationManager:
         self.rewriter = rewriter
         self.analyzer = analyzer or RuleBasedSentimentAnalyzer()
         self.clock = clock
+        self.events = events or EventRecorder(None, clock, enabled=False)
 
     # ------------------------------------------------------------------ helpers
     def _add(self, session: Session, role: str, content: str, **kw) -> Message:
@@ -127,6 +134,12 @@ class ConversationManager:
                       sound_enabled: bool = True) -> TurnResult:
         if email:
             email = str(_EMAIL.validate_python(email))
+        if self.store.active_count() >= self.settings.max_active_sessions:
+            self.store.purge(self.clock(), self.settings.session_retention_seconds)
+            if self.store.active_count() >= self.settings.max_active_sessions:
+                logger.warning("session limit reached (%d active)", self.store.active_count())
+                self.events.error("sessions", "SessionLimitReached")
+                raise SessionLimitReached()
         session = self.store.create(self.clock())
         with session.lock:
             session.customer_name = " ".join(name.split())[:100] if name else None
@@ -134,6 +147,7 @@ class ConversationManager:
             session.sound_enabled = sound_enabled
             greeting = self._add(session, "assistant", SMALLTALK_REPLIES["greeting"], kind="greeting")
         logger.info("session started id=%s", session.session_id[:8])
+        self.events.record("session_started", session.session_id, with_email=bool(email))
         return self._result(session, greeting, "greeting")
 
     def get(self, session_id: str) -> Session:
@@ -154,6 +168,7 @@ class ConversationManager:
 
     # ------------------------------------------------------------------ messages
     def handle_message(self, session_id: str, text: str) -> TurnResult:
+        started = time.perf_counter()
         session = self._open_session(session_id)
         text = self._validate_text(text, self.settings.max_message_chars)
         with session.lock:
@@ -166,8 +181,19 @@ class ConversationManager:
                 session.status, session.idle_check_sent_at = "active", None
             result = self._respond(session, text, sentiment, user_msg, history)
             result.sentiment = sentiment
-        logger.info("turn session=%s status=%s sentiment=%s irrelevant=%d q=%r", session.session_id[:8],
-                    result.status, sentiment.label, session.irrelevant_count, redact(text))
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        rag = result.rag
+        logger.info("turn session=%s status=%s sentiment=%s irrelevant=%d rewritten=%s sources=%s %dms q=%r",
+                    session.session_id[:8], result.status, sentiment.label, session.irrelevant_count,
+                    bool(rag and rag.search_query != text),
+                    [s.page_id for s in rag.sources] if rag else [], latency_ms, redact(text))
+        self.events.record(
+            "message", session.session_id, status=result.status, sentiment=sentiment.label, latency_ms=latency_ms,
+            request_kind=rag.request_kind if rag else None, generator=rag.generator if rag else None,
+            top_score=rag.top_score if rag else None, followup_rewritten=bool(rag and rag.search_query != text),
+            question=text if result.status in ("answered", "needs_team", "off_topic") else None)
+        if rag is not None and rag.status == "error":
+            self.events.error("rag", "PipelineError", session.session_id)
         return result
 
     def _respond(self, session: Session, text: str, sentiment: Sentiment, user_msg: Message,
@@ -250,6 +276,8 @@ class ConversationManager:
             if rec:
                 recs = rec.public()
                 session.recommended.append(recs["primary"])
+                self.events.record("recommendation", session.session_id, primary=recs["primary"]["name"],
+                                   related=[r["name"] for r in recs["related"]], status=status)
                 if status == "answered" and (is_recommendation_seeking(text) or rag.request_kind == "project_request"):
                     answer = _insert_before_closing(answer, recommendation_sentence(rec))
 
@@ -282,16 +310,20 @@ class ConversationManager:
         session = self._open_session(session_id)
         with session.lock:
             interest = session.recommended[-1]["name"] if session.recommended else session.topic
-            lead = self.leads.create(data, session_id=session.session_id, interest=interest)
+            try:
+                lead = self.leads.create(data, session_id=session.session_id, interest=interest)
+            except Exception as exc:
+                logger.exception("lead capture failed session=%s", session.session_id[:8])
+                self.events.error("leads", exc, session.session_id)
+                raise LeadCaptureError() from exc
+            self.events.record("lead_submitted", session.session_id, interest=interest, source=lead.source,
+                               with_phone=bool(lead.phone), with_company=bool(lead.company))
             session.lead_ids.append(lead.lead_id)
             session.customer_name = session.customer_name or lead.name
             session.customer_email = session.customer_email or lead.email
             session.flow = "awaiting_anything_else"
             self._add(session, "user", "(Submitted the contact form)", kind="form_submission")
-            reply = self._add(session, "assistant",
-                              f"Thank you, {lead.first_name}! We've received your details, and the relevant "
-                              f"V Group team will connect with you shortly. Is there anything else I can help you with?",
-                              kind="lead_confirmation")
+            reply = self._add(session, "assistant", lead_confirmation(lead), kind="lead_confirmation")
         self.emails.notify_team(lead, session)
         return self._result(session, reply, "lead_confirmation", lead=lead)
 
@@ -300,6 +332,7 @@ class ConversationManager:
                         channel: str = "chat") -> Message:
         session = self.store.get(session_id)
         r = self.feedback.record(session.session_id, rating, comment, channel)
+        self.events.record("feedback", session.session_id, rating=r, channel=channel, with_comment=bool(comment))
         with session.lock:
             session.feedback = r
             return self._add(session, "assistant", FEEDBACK_THANKS[r], kind="feedback_ack")
@@ -313,6 +346,12 @@ class ConversationManager:
         if not self.emails.enabled:
             raise RuntimeError("email is not configured")
         with session.lock:
+            # Abuse protection: a chat can only email the one address its customer gave,
+            # and only a limited number of times (no open relay to arbitrary recipients).
+            if session.customer_email and address.lower() != session.customer_email.lower():
+                raise ValueError("emails can only be sent to the address you shared in this chat")
+            if len(session.emails_sent) >= self.settings.email_max_per_session:
+                raise EmailLimitReached()
             session.customer_email = session.customer_email or address
         return self.emails.send(kind, session, address)
 
@@ -333,13 +372,13 @@ class ConversationManager:
                 text = (f"This chat has ended because we didn't hear back from you.{note} Feel free to start a "
                         f"new chat anytime - we're happy to help.")
             elif reason == "irrelevant_limit":
-                text = ("Sorry, that's also outside the V Group information I can help with. Since the last few "
-                        "messages weren't about V Group's services, I'm closing this chat for now."
+                text = ("Sorry, that's also outside the D Group information I can help with. Since the last few "
+                        "messages weren't about D Group's services, I'm closing this chat for now."
                         f"{note} If you have questions about our services, products or support plans, you're "
                         "welcome to start a new chat anytime. Thank you!")
                 action = FEEDBACK_ACTION
             else:
-                text = f"Thank you for chatting with V Group!{note} Have a great day."
+                text = f"Thank you for chatting with D Group!{note} Have a great day."
                 action = FEEDBACK_ACTION
             reply = self._add(session, "assistant", text, kind="session_end")
             session.status, session.flow = "closed", None
@@ -351,6 +390,10 @@ class ConversationManager:
                     logger.exception("could not save transcript for %s", session.session_id[:8])
         if emailing:
             self.emails.on_session_closed(session)
+        self.events.record("session_closed", session.session_id, reason=reason,
+                           duration_s=round((session.closed_at - session.created_at).total_seconds(), 1),
+                           user_messages=len(session.user_messages()), irrelevant_count=session.irrelevant_count,
+                           lead_captured=bool(session.lead_ids), emailed=emailing)
         logger.info("session closed id=%s reason=%s messages=%d", session.session_id[:8], reason,
                     len(session.messages))
         return self._result(session, reply, "session_end", action=action)

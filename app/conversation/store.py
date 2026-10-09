@@ -16,6 +16,10 @@ class SessionClosed(RuntimeError):
     pass
 
 
+class SessionLimitReached(RuntimeError):
+    """Too many active sessions (memory protection)."""
+
+
 class SessionStore(ABC):
     @abstractmethod
     def create(self, now: datetime) -> Session: ...
@@ -28,6 +32,9 @@ class SessionStore(ABC):
 
     @abstractmethod
     def purge(self, now: datetime, retention_seconds: int) -> int: ...
+
+    def active_count(self) -> int:
+        return len(self.all())
 
 
 class InMemorySessionStore(SessionStore):
@@ -51,6 +58,10 @@ class InMemorySessionStore(SessionStore):
     def all(self) -> list[Session]:
         with self._lock:
             return list(self._sessions.values())
+
+    def active_count(self) -> int:
+        with self._lock:
+            return len(self._sessions)
 
     def purge(self, now: datetime, retention_seconds: int) -> int:
         """Drop sessions with no activity for `retention_seconds`."""

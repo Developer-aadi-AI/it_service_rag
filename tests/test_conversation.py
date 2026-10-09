@@ -28,7 +28,7 @@ def say(svc, sid, text, clock=None):
 
 def test_session_starts_with_greeting(svc):
     r = svc.manager.start_session()
-    assert r.reply.kind == "greeting" and "V Group" in r.reply.content
+    assert r.reply.kind == "greeting" and "D Group" in r.reply.content
     assert r.session.status == "active"
 
 
@@ -293,7 +293,7 @@ def test_goodbye_closes_gracefully(svc, clock, bye):
     say(svc, sid, "What is SMTU?", clock)
     r = say(svc, sid, bye, clock)
     assert r.status == "session_end" and r.action["type"] == "feedback"
-    assert "Thank you for chatting with V Group" in r.reply.content
+    assert "Thank you for chatting with D Group" in r.reply.content
     assert "inbox" not in r.reply.content  # no email address known -> no email promised
 
 

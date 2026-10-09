@@ -63,13 +63,22 @@ class ContactResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status: str
-    mode: str
+    status: Literal["ok", "degraded"]
+    version: str = "3.0.0"
+    environment: str = "development"
+    mode: str = Field(..., description="answer mode: llm:<provider>/<model> or extractive")
     documents: int
     chunks: int
     similarity_threshold: float
     domain_threshold: float
     top_k: int
+    checks: dict[str, str] = Field(default_factory=dict, description="component -> ok | error | disabled")
+    active_sessions: int | None = None
+
+
+class ErrorResponse(BaseModel):
+    detail: str
+    errors: list[dict[str, str]] | None = None
 
 
 # ============================ Phase 2: conversations ============================

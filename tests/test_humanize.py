@@ -11,9 +11,9 @@ from app.rag.intent import is_company_overview
 
 
 @pytest.mark.parametrize("raw,expected", [
-    ("Build Your Platform V Group specializes in developing intuitive, high-performing mobile apps.",
-     "V Group specializes in developing intuitive, high-performing mobile apps."),
-    ("Web Design Services At V Group, we build websites with purpose.", "At V Group, we build websites with purpose."),
+    ("Build Your Platform D Group specializes in developing intuitive, high-performing mobile apps.",
+     "D Group specializes in developing intuitive, high-performing mobile apps."),
+    ("Web Design Services At D Group, we build websites with purpose.", "At D Group, we build websites with purpose."),
     ("Introduction: ReviewCaddy extension for Magento is developed to integrate the ReviewCaddy app.",
      "ReviewCaddy extension for Magento is developed to integrate the ReviewCaddy app."),
     ("Platform: Shopify CMS Client Overview First Aid Only, an Acme United Corporation brand, is a provider.",
@@ -22,9 +22,9 @@ from app.rag.intent import is_company_overview
      "The Annual Support plan costs $3,500 per year, payable in advance."),
     ("Restorsea Restorsea is a physician-dispensed skincare brand we have partnered with since 2013.",
      "Restorsea is a physician-dispensed skincare brand we have partnered with since 2013."),
-    ("V Group is an ISO 9001:2015 Certified Company with a highly experienced in-house team /including: "
+    ("D Group is an ISO 9001:2015 Certified Company with a highly experienced in-house team /including: "
      "Shopify Expert Partners Magento Certified Front-End Developers BigCommerce Certified Professionals",
-     "V Group is an ISO 9001:2015 Certified Company with a highly experienced in-house team."),
+     "D Group is an ISO 9001:2015 Certified Company with a highly experienced in-house team."),
 ])
 def test_clean_sentence(raw, expected):
     assert clean_sentence(raw) == expected
@@ -38,7 +38,7 @@ def test_clean_sentence_removes_cta_labels():
 @pytest.mark.parametrize("text", [
     "UI/UX Design Wireframes Mobile App Design Start Your Project.",
     "Products Inventory Setup Up to 100 SKUs Up to 500 SKUs Product Variations Yes Yes.",
-    "V Group is here to help.",
+    "D Group is here to help.",
 ])
 def test_fragments_detected(text):
     assert is_fragment(text)
@@ -62,8 +62,8 @@ def test_plan_price_sentences():
     assert plan_price_sentences(text, "Buy Our Packages") == []  # mixed-product page: ambiguous
 
 
-@pytest.mark.parametrize("q", ["what do you guys do??", "what does vgroup do?", "Tell me about your company",
-                               "What services do you offer?", "who are you", "Hi, what is V Group?"])
+@pytest.mark.parametrize("q", ["what do you guys do??", "what does dgroup do?", "Tell me about your company",
+                               "What services do you offer?", "who are you", "Hi, what is D Group?"])
 def test_overview_intent(q):
     assert is_company_overview(q)
 
@@ -83,11 +83,11 @@ def test_contact_intent(q, yes):
 
 # --- end to end on the real data ------------------------------------------------------------
 
-@pytest.mark.parametrize("q", ["what do you guys do??", "what does vgroup do?"])
+@pytest.mark.parametrize("q", ["what do you guys do??", "what does dgroup do?"])
 def test_overview_answer_from_about_page(real_bundle, q):
     r = real_bundle.pipeline.answer(q)
     assert r.status == "answered" and not r.off_topic
-    assert r.sources[0].page_id == "db-66"  # About V Group
+    assert r.sources[0].page_id == "db-66"  # About D Group
     assert "digital solutions company" in r.answer
 
 
@@ -113,8 +113,8 @@ def test_contact_values_exist_in_source(real_bundle, real_settings):
 
 def test_answers_have_no_page_residue(real_bundle):
     residue = re.compile(r"\b(Buy Now|View Project|Start Your [A-Z]\w+ Project|Client Overview)\b")
-    for q in ["what does vgroup do?", "Do you build mobile apps?", "What is the cost of the BigCommerce Gold plan?",
-              "Tell me about the First Aid Only project", "Is V Group ISO certified?"]:
+    for q in ["what does dgroup do?", "Do you build mobile apps?", "What is the cost of the BigCommerce Gold plan?",
+              "Tell me about the First Aid Only project", "Is D Group ISO certified?"]:
         r = real_bundle.pipeline.answer(q)
         assert r.status == "answered", q
         assert not residue.search(r.answer), (q, r.answer)

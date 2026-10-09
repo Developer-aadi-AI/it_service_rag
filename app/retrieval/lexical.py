@@ -14,8 +14,8 @@ from collections import Counter
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9+#.-]*[a-z0-9+#]|[a-z0-9]")
-# Words that are on nearly every page / in nearly every question about V Group.
-_EXTRA_STOP = {"v", "group", "vgroup", "tell", "know", "want", "need", "like", "does", "do", "provide",
+# Words that are on nearly every page / in nearly every question about D Group.
+_EXTRA_STOP = {"d", "group", "dgroup", "tell", "know", "want", "need", "like", "does", "do", "provide",
                "offer", "please", "hi", "hello", "thanks", "thank"}
 _STOP = set(ENGLISH_STOP_WORDS) | _EXTRA_STOP
 

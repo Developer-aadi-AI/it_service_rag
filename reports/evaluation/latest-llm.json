@@ -1,0 +1,233 @@
+{
+  "timestamp": "2026-10-08T21:09:48+00:00",
+  "mode": "llm:groq/openai/gpt-oss-120b",
+  "dataset_version": 2,
+  "retrieval": {
+    "hit_at_k": 1.0,
+    "mrr": 0.97,
+    "k": 5,
+    "precision_at_k": 0.285,
+    "n": 47,
+    "multi_chunk_page_recall": 1.0
+  },
+  "answers": {
+    "n": 47,
+    "answer_rate": 1.0,
+    "fact_recall": 0.979,
+    "citation_accuracy": 0.979,
+    "all_facts": 0.915,
+    "grounding_rate": 0.961,
+    "fully_grounded_answers": 0.936,
+    "invalid_citations": 0,
+    "by_category": {
+      "factual": {
+        "n": 29,
+        "answer_rate": 1.0,
+        "fact_recall": 0.966,
+        "citation_accuracy": 1.0,
+        "all_facts": 0.862
+      },
+      "service": {
+        "n": 13,
+        "answer_rate": 1.0,
+        "fact_recall": 1.0,
+        "citation_accuracy": 0.923,
+        "all_facts": 1.0
+      },
+      "multi_chunk": {
+        "n": 5,
+        "answer_rate": 1.0,
+        "fact_recall": 1.0,
+        "citation_accuracy": 1.0,
+        "all_facts": 1.0
+      }
+    }
+  },
+  "follow_up": {
+    "n": 6,
+    "fact_recall": 1.0,
+    "citation_accuracy": 1.0,
+    "rewrite_rate": 0.833,
+    "grounding_rate": 1.0
+  },
+  "no_answer": {
+    "n": 9,
+    "routed_to_team": 0.556,
+    "request_kind_accuracy": 0.556
+  },
+  "hallucination": {
+    "n": 7,
+    "resistance": 0.857
+  },
+  "off_topic": {
+    "n": 12,
+    "accuracy": 1.0
+  },
+  "ambiguous": {
+    "n": 6,
+    "acceptable": 0.667
+  },
+  "latency_ms": {
+    "mean": 6347.0,
+    "p95": 13130.3,
+    "questions": 81
+  },
+  "duration_s": 644.6,
+  "checks": {
+    "retrieval.hit_at_k": {
+      "value": 1.0,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "retrieval.mrr": {
+      "value": 0.97,
+      "threshold": 0.75,
+      "passed": true
+    },
+    "answers.answer_rate": {
+      "value": 1.0,
+      "threshold": 0.85,
+      "passed": true
+    },
+    "answers.fact_recall": {
+      "value": 0.979,
+      "threshold": 0.75,
+      "passed": true
+    },
+    "answers.citation_accuracy": {
+      "value": 0.979,
+      "threshold": 0.8,
+      "passed": true
+    },
+    "answers.grounding_rate": {
+      "value": 0.961,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "answers.invalid_citations": {
+      "value": 0,
+      "threshold": 0,
+      "passed": true
+    },
+    "follow_up.fact_recall": {
+      "value": 1.0,
+      "threshold": 0.6,
+      "passed": true
+    },
+    "no_answer.routed_to_team": {
+      "value": 0.556,
+      "threshold": 0.8,
+      "passed": false
+    },
+    "hallucination.resistance": {
+      "value": 0.857,
+      "threshold": 0.9,
+      "passed": false
+    },
+    "off_topic.accuracy": {
+      "value": 1.0,
+      "threshold": 0.9,
+      "passed": true
+    },
+    "ambiguous.acceptable": {
+      "value": 0.667,
+      "threshold": 0.8,
+      "passed": false
+    }
+  },
+  "failures": [
+    {
+      "category": "factual",
+      "question": "How does the Cart Discount Shopify app work?",
+      "reason": "answer sentence not supported by cited pages",
+      "unsupported": [
+        "All of this is managed from a central dashboard where you can monitor and adjust your discount rules."
+      ]
+    },
+    {
+      "category": "factual",
+      "question": "Are there any job openings at D Group?",
+      "reason": "answer sentence not supported by cited pages",
+      "unsupported": [
+        "Yes, we're hiring!"
+      ]
+    },
+    {
+      "category": "factual",
+      "question": "Should I choose React Native or Flutter?",
+      "reason": "answer sentence not supported by cited pages",
+      "unsupported": [
+        "Which of these factors matters most for your app?"
+      ]
+    },
+    {
+      "category": "factual",
+      "question": "Which brands has D Group worked with?",
+      "reason": "expected fact missing from answer",
+      "expected": [
+        "westcott"
+      ],
+      "answer": "We've partnered with several well-known brands, including SeaWorld, Jackery, Lush Decor and OZ Naturals."
+    },
+    {
+      "category": "service",
+      "question": "What platforms does D Group work with?",
+      "reason": "cited page does not contain the answer",
+      "cited": [
+        "db-280",
+        "db-2351"
+      ],
+      "answer": "We work with a wide range of e-commerce platforms, including WooCommerce, Magento, BigCommerce, Squarespace, Shopify and Amazon Webstore, among others."
+    },
+    {
+      "category": "no_answer",
+      "question": "Can you build an AI chatbot for my website?",
+      "reason": "expected team hand-off, got answered",
+      "answer": "Yes, we can develop a custom AI chatbot for your website. Our team can create an AI shopping agent that understands shopper intent, provides real-time personali"
+    },
+    {
+      "category": "no_answer",
+      "question": "I want a blockchain-based NFT marketplace",
+      "reason": "expected team hand-off, got off_topic",
+      "answer": "I can only help with questions about D Group - for example our web design and development, e-commerce work on platforms like Shopify, Magento, BigCommerce, Word"
+    },
+    {
+      "category": "no_answer",
+      "question": "Can you build a smart-home IoT system for my house?",
+      "reason": "expected team hand-off, got off_topic",
+      "answer": "I can only help with questions about D Group - for example our web design and development, e-commerce work on platforms like Shopify, Magento, BigCommerce, Word"
+    },
+    {
+      "category": "no_answer",
+      "question": "Do you offer web hosting plans?",
+      "reason": "expected team hand-off, got answered",
+      "answer": "We don't sell hosting plans directly; we provide expert support to set up and configure your website on third-party hosting providers such as AWS, GoDaddy, Micr"
+    },
+    {
+      "category": "hallucination",
+      "question": "I read that D Group charges $99 for a Shopify store, is that right?",
+      "reason": "possible hallucination",
+      "forbidden": [],
+      "numbers": [
+        "$5,999,"
+      ],
+      "unsupported": [],
+      "answer": "No, our Shopify packages are not $99. The Silver plan starts at $3,999 and the Gold plan starts at $5,999, both as one-time charges that include design, development, and implementation. [1]"
+    },
+    {
+      "category": "ambiguous",
+      "question": "How many clients do you have?",
+      "reason": "status=answered",
+      "answer": "Don't let leads slip away; refer them to us and earn a referral fee while keeping your client relationships intact. By combining strengths, we deliver broader s"
+    },
+    {
+      "category": "ambiguous",
+      "question": "Since when has D Group been in business?",
+      "reason": "status=answered",
+      "answer": "Here are simple steps: Behind the scenes of the way we move from your vision to your growth Share Your Vision We tailor the plan and platform to fit your busine"
+    }
+  ],
+  "generators": {
+    "note": "recorded before generator tracking was added; 8 of ~95 LLM calls hit Groq rate limits and fell back"
+  }
+}

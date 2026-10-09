@@ -1,0 +1,7 @@
+timestamp,mode,retrieval.hit_at_k,retrieval.mrr,answers.answer_rate,answers.fact_recall,answers.citation_accuracy,answers.grounding_rate,answers.invalid_citations,follow_up.fact_recall,no_answer.routed_to_team,hallucination.resistance,off_topic.accuracy,ambiguous.acceptable,latency_mean_ms,all_passed
+2026-10-08T20:48:00+00:00,llm:groq/openai/gpt-oss-120b,1.0,0.97,1.0,0.894,0.957,0.975,0,0.833,0.556,0.857,1.0,0.833,8183.2,False
+2026-10-08T21:09:48+00:00,llm:groq/openai/gpt-oss-120b,1.0,0.97,1.0,0.979,0.979,0.961,0,1.0,0.556,0.857,1.0,0.667,6347.0,False
+2026-10-08T21:33:56+00:00,llm:groq/openai/gpt-oss-120b,1.0,0.986,1.0,0.851,0.894,1.0,0,0.667,1.0,1.0,1.0,0.833,1797.6,True
+2026-10-08T21:45:19+00:00,extractive,1.0,0.986,1.0,0.894,0.936,0.973,0,1.0,1.0,1.0,1.0,1.0,653.6,True
+2026-10-08T22:08:00+00:00,extractive,1.0,0.986,1.0,0.894,0.936,1.0,0,1.0,1.0,1.0,1.0,1.0,550.7,True
+2026-10-09T19:12:49+00:00,extractive,1.0,0.956,1.0,0.872,0.936,1.0,0,1.0,1.0,1.0,1.0,1.0,979.1,True

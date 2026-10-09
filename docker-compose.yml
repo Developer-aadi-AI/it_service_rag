@@ -1,0 +1,18 @@
+# Local production-like run:  docker compose up --build
+# Put real values in .env (never commit it). ENVIRONMENT=production requires APP_SECRET_KEY,
+# CORS_ORIGINS and an https PUBLIC_BASE_URL - see docs/DEPLOYMENT.md.
+services:
+  assistant:
+    build: .
+    image: dgroup-assistant:latest
+    env_file: .env
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "8000:8000"
+    volumes:
+      - assistant-data:/data
+    restart: unless-stopped
+
+volumes:
+  assistant-data:

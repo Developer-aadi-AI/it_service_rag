@@ -95,9 +95,15 @@ def test_specific_questions_rank_expected_page_first_page(real_bundle, question,
 
 
 def test_off_topic_scores_below_domain_threshold(real_bundle, real_settings, eval_set):
+    import re
+
     r = real_bundle.pipeline.retriever
-    scores = [r.retrieve(q).top_score for q in eval_set["off_topic"]]
+    # inputs without words ("???") never reach retrieval: the pipeline's unclear-input rule handles them
+    worded = [q for q in eval_set["off_topic"] if re.search(r"[^\W\d_]{2,}", q) and q != "hmm"]
+    scores = [r.retrieve(q).top_score for q in worded]
     assert max(scores) < real_settings.domain_threshold, scores
+    for q in set(eval_set["off_topic"]) - set(worded):
+        assert real_bundle.pipeline.answer(q).status == "off_topic", q
 
 
 def test_hits_have_citation_metadata(real_bundle):
